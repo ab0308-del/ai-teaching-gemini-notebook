@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>文字雲互動</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/wordcloud2.js/1.1.0/wordcloud2.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #1a1a2e;
+    color: #fff;
+    font-family: 'Noto Sans TC', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  #question {
+    padding: 24px 32px 16px;
+    font-size: clamp(1.4rem, 3vw, 2.2rem);
+    font-weight: 900;
+    color: #00d4ff;
+    text-shadow: 0 0 20px rgba(0,212,255,0.4);
+  }
+  #main {
+    display: flex;
+    flex: 1;
+    gap: 0;
+    padding: 0 16px 0 16px;
+  }
+  #left {
+    width: 300px;
+    min-width: 260px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding-right: 16px;
+  }
+  #input-box {
+    background: #2a2a4a;
+    border-radius: 12px;
+    padding: 20px;
+  }
+  #input-box h3 {
+    color: #00d4ff;
+    font-size: 1rem;
+    margin-bottom: 12px;
+    text-align: center;
+  }
+  #response-input {
+    width: 100%;
+    background: #1a1a2e;
+    border: 2px solid #00d4ff;
+    border-radius: 8px;
+    color: #fff;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 1rem;
+    padding: 10px 12px;
+    resize: none;
+    height: 80px;
+  }
+  #response-input::placeholder { color: #666; }
+  #response-input:focus { outline: none; border-color: #6bcb77; }
+  #submit-btn {
+    width: 100%;
+    margin-top: 10px;
+    background: #00d4ff;
+    color: #1a1a2e;
+    border: none;
+    border-radius: 8px;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    padding: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  #submit-btn:hover { background: #6bcb77; transform: translateY(-1px); }
+  #submit-msg {
+    text-align: center;
+    font-size: 0.9rem;
+    color: #6bcb77;
+    min-height: 1.2em;
+    margin-top: 6px;
+  }
+  #leaderboard {
+    background: #2a2a4a;
+    border-radius: 12px;
+    padding: 16px;
+    flex: 1;
+    overflow-y: auto;
+    max-height: 380px;
+  }
+  #leaderboard h3 {
+    color: #00d4ff;
+    font-size: 1rem;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .live-badge {
+    background: #ff6b6b;
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    animation: pulse 1.5s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+  .lb-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px solid #3a3a5a;
+    font-size: 0.85rem;
+  }
+  .lb-item:last-child { border-bottom: none; }
+  .lb-count {
+    color: #ffd93d;
+    font-weight: 700;
+    min-width: 28px;
+    text-align: right;
+  }
+  #right {
+    flex: 1;
+    position: relative;
+    min-height: 400px;
+  }
+  #wordcloud-canvas {
+    width: 100%;
+    height: 100%;
+    min-height: 400px;
+  }
+  #footer {
+    padding: 12px 32px;
+    color: #888;
+    font-size: 0.85rem;
+    border-top: 1px solid #2a2a4a;
+  }
+  #footer span { color: #00d4ff; font-weight: 700; }
+#question-form{display:flex;align-items:center;gap:10px;flex-wrap:wrap}#question-input{flex:1;min-width:180px;background:#2a2a4a;color:white;border:1px solid #00d4ff;border-radius:8px;font:inherit}#question-form button{padding:12px;background:#00d4ff;border:0;border-radius:8px;cursor:pointer}#question-status{width:100%;font-size:14px;color:#b9d3da}button:disabled{opacity:.5;cursor:wait}.lb-item{gap:12px;overflow-wrap:anywhere}#right{height:65vh}#submit-msg{color:#ffcd6b}@media(max-width:700px){#main{flex-direction:column}#left{width:100%;min-width:0;padding:0}#right{height:400px}#question{padding:16px}#leaderboard{max-height:220px}#question-form{padding:16px!important}#footer{padding:16px}}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script><style>#qr-dialog{margin:auto;width:min(480px,94vw);max-height:90vh;overflow:auto;border:1px solid #00d4ff;border-radius:16px;padding:24px;background:#1a1a2e;color:white;font:inherit}#qr-dialog::backdrop{background:#000b}#qr-dialog h2{color:#00d4ff;margin-bottom:12px}#qr-url{width:100%;padding:10px;margin:10px 0;background:#2a2a4a;color:white;border:1px solid #00d4ff;border-radius:8px;font:inherit}#qr-code{width:280px;max-width:100%;margin:18px auto;background:white;padding:12px}#qr-code img,#qr-code canvas{width:100%;height:auto}#qr-dialog button{padding:10px 16px;margin:8px 5px 8px 0;border:0;border-radius:8px;background:#00d4ff;color:#1a1a2e;cursor:pointer}#qr-message{overflow-wrap:anywhere;font-size:14px;color:#c8dce5}</style></head>
+<body>
+
+<form id="question-form" style="padding:16px 32px">
+  <label for="question-input">題目</label>
+  <input id="question-input" placeholder="請輸入這次的題目" style="width:65%;padding:12px" required>
+  <button type="submit">套用題目</button>
+  <button id="share-btn" type="button">複製本題連結</button><button id="qr-btn" type="button">顯示 QR Code</button>
+  <div id="question-status" role="status"></div>
+</form>
+<div id="question"></div>
+
+<div id="main">
+  <div id="left">
+    <div id="input-box">
+      <h3>輸入你的使用情境</h3>
+      <textarea id="response-input" placeholder="例：通勤時聽語音摘要、試教前複習教案..."></textarea>
+      <button id="submit-btn">送出 ↵</button>
+      <div id="submit-msg"></div>
+    </div>
+    <div id="leaderboard">
+      <h3>熱門回答 <span class="live-badge">LIVE</span></h3>
+      <div id="lb-list"></div>
+    </div>
+  </div>
+  <div id="right">
+    <canvas id="wordcloud-canvas"></canvas>
+  </div>
+</div>
+
+<div id="footer">
+  總提交：<span id="total-count">0</span> &nbsp;|&nbsp; 不同回答：<span id="unique-count">0</span>
+</div>
+
+<dialog id="qr-dialog"><h2>掃描加入本題文字雲</h2><p>使用手機相機掃描，即可開啟相同題目。</p><label for="qr-url">已發布的文字雲網址</label><input id="qr-url" type="url" placeholder="https://你的網站/wordcloud.html"><button id="qr-generate" type="button">產生 QR Code</button><button id="qr-close" type="button">關閉</button><div id="qr-code" hidden></div><p id="qr-message" role="status"></p></dialog><script>
+const SUPABASE_URL = 'https://demckofqselwofbpdztn.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRlbWNrb2Zxc2Vsd29mYnBkenRuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc4Mzk3MDYsImV4cCI6MjA5MzQxNTcwNn0.OQFeOvbYVKjHey7soPbuLGtkzCICKg1QPdm8w4l2sS8';
+const TABLE = 'wordcloud_responses';
+const DEFAULT_QUESTION = "想一想:日常使用情境與下一次使用時刻";
+let QUESTION = (new URLSearchParams(location.search).get('question') ?? DEFAULT_QUESTION).trim();
+let refreshVersion = 0;
+let submitting = false;
+const questionInput = document.getElementById('question-input');
+const questionStatus = document.getElementById('question-status');
+function showQuestion() {
+  questionInput.value = QUESTION;
+  document.getElementById('question').textContent = QUESTION || '請先輸入題目';
+  document.getElementById('submit-btn').disabled = !QUESTION;
+}
+document.getElementById('question-form').addEventListener('submit', e => {
+  e.preventDefault();
+  const next = questionInput.value.trim();
+  if (!next) { questionStatus.textContent = '請輸入題目'; return; }
+  QUESTION = next;
+  refreshVersion++;
+  showQuestion();
+  document.getElementById('response-input').value = '';
+  document.getElementById('submit-msg').textContent = '';
+  renderLeaderboard({});
+  const canvas = document.getElementById('wordcloud-canvas');
+  canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+  try {
+    const url = new URL(location.href);
+    url.searchParams.set('question', QUESTION);
+    history.replaceState(null, '', url);
+  } catch (_) {}
+  questionStatus.textContent = '已套用題目；相同題目會載入既有回答。';
+  refresh();
+});
+document.getElementById('share-btn').addEventListener('click', async () => {
+  if (!QUESTION) { questionStatus.textContent = '請先套用題目'; return; }
+  if (!/^https?:$/.test(location.protocol)) {
+    questionStatus.textContent = '這是本機檔案，需先部署至學生可連線的網址才能分享。'; return;
+  }
+  const url = new URL(location.href);
+  url.searchParams.set('question', QUESTION);
+  try { await navigator.clipboard.writeText(url.href); questionStatus.textContent = '已複製本題連結'; }
+  catch (_) { questionStatus.textContent = '請複製連結：' + url.href; }
+});
+showQuestion();
+
+const qrDialog=document.getElementById('qr-dialog');
+function generateQR(){
+ const box=document.getElementById('qr-code'),msg=document.getElementById('qr-message');box.replaceChildren();box.hidden=true;
+ if(!QUESTION){msg.textContent='請先套用題目。';return;}
+ let url;try{url=new URL(document.getElementById('qr-url').value.trim());if(!/^https?:$/.test(url.protocol)||['localhost','127.0.0.1','[::1]'].includes(url.hostname))throw Error();}catch{msg.textContent='請填入學員手機可連線的正式網頁網址。';return;}
+ url.searchParams.set('question',QUESTION);url.hash='';
+ if(typeof QRCode!=='function'){msg.textContent='QR Code 元件尚未載入，請確認網路後重試。';return;}
+ try{new QRCode(box,{text:url.href,width:256,height:256,colorDark:'#142b22',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});box.hidden=false;msg.textContent='本題：'+QUESTION;}catch{box.replaceChildren();msg.textContent='無法產生 QR Code，請檢查網址或縮短題目後重試。';}
+}
+document.getElementById('qr-btn').addEventListener('click',()=>{const box=document.getElementById('qr-code');box.replaceChildren();box.hidden=true;qrDialog.showModal();if(/^https?:$/.test(location.protocol)){document.getElementById('qr-url').value=location.href;generateQR();}else{document.getElementById('qr-message').textContent='目前是本機預覽，尚無手機可開啟的網址。發布後會自動產生；已有正式網址也可填在上方。';}});
+document.getElementById('qr-generate').addEventListener('click',generateQR);
+document.getElementById('qr-close').addEventListener('click',()=>qrDialog.close());
+
+const COLORS = ['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#ff922b','#cc5de8','#20c997','#f06595','#74c0fc','#a9e34b'];
+
+async function fetchResponses(question) {
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/${TABLE}?question=eq.${encodeURIComponent(question)}&select=response`,
+    { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
+  );
+  if (!res.ok) throw new Error('讀取失敗');
+  return await res.json();
+}
+
+function countFrequency(data) {
+  const freq = Object.create(null);
+  data.forEach(r => {
+    const key = (r.response || '').trim();
+    if (key) freq[key] = (freq[key] || 0) + 1;
+  });
+  return freq;
+}
+
+function renderWordCloud(freq) {
+  const canvas = document.getElementById('wordcloud-canvas');
+  canvas.width = canvas.offsetWidth;
+  canvas.height = canvas.offsetHeight;
+  const entries = Object.entries(freq).sort((a,b) => b[1]-a[1]);
+  const max = entries[0]?.[1] || 1;
+  const wordList = entries.map(([word, count]) => [word, Math.round(20 + (count/max)*80)]);
+  if(typeof WordCloud!=='function'){questionStatus.textContent='文字雲圖形尚未載入，回答仍會顯示於排行榜。';return;}
+  WordCloud(canvas, {
+    list: wordList,
+    gridSize: 8,
+    weightFactor: 1,
+    fontFamily: 'Noto Sans TC, sans-serif',
+    color: () => COLORS[Math.floor(Math.random()*COLORS.length)],
+    rotateRatio: 0.3,
+    rotationSteps: 2,
+    backgroundColor: 'transparent',
+    shuffle: true,
+  });
+}
+
+function renderLeaderboard(freq) {
+  const entries = Object.entries(freq).sort((a,b)=>b[1]-a[1]).slice(0,15);
+  const total = Object.values(freq).reduce((a,b)=>a+b,0);
+  const unique = Object.keys(freq).length;
+  const list = document.getElementById('lb-list');
+  list.replaceChildren();
+  entries.forEach(([w,c]) => {
+    const row = document.createElement('div'); row.className = 'lb-item';
+    const label = document.createElement('span'); label.textContent = w;
+    const count = document.createElement('span'); count.className = 'lb-count'; count.textContent = c;
+    row.append(label, count); list.append(row);
+  });
+  document.getElementById('total-count').textContent = total;
+  document.getElementById('unique-count').textContent = unique;
+}
+
+async function refresh() {
+  if (!QUESTION) return;
+  const question = QUESTION;
+  const version = ++refreshVersion;
+  try {
+    const data = await fetchResponses(question);
+    if (version !== refreshVersion || question !== QUESTION) return;
+    const freq = countFrequency(data);
+    renderWordCloud(freq);
+    renderLeaderboard(freq);
+  } catch(e) {
+    if (version === refreshVersion) questionStatus.textContent = '讀取回答失敗，請確認網路後再試。';
+  }
+}
+
+document.getElementById('submit-btn').addEventListener('click', async () => {
+  const val = document.getElementById('response-input').value.trim();
+  if (!val || !QUESTION || submitting) return;
+  submitting = true;
+  document.getElementById('submit-btn').disabled = true;
+  const submittedQuestion = QUESTION;
+  const msg = document.getElementById('submit-msg');
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${TABLE}`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({ question: submittedQuestion, response: val })
+    });
+    if (!res.ok) throw new Error('送出失敗');
+    if (submittedQuestion !== QUESTION) return;
+    document.getElementById('response-input').value = '';
+    msg.textContent = '✅ 已送出！';
+    setTimeout(() => msg.textContent = '', 2000);
+    await refresh();
+  } catch(e) {
+    if (submittedQuestion === QUESTION) msg.textContent = '❌ 送出失敗，請重試';
+  } finally {submitting = false;document.getElementById('submit-btn').disabled = !QUESTION;}
+});
+
+document.getElementById('response-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    document.getElementById('submit-btn').click();
+  }
+});
+
+refresh();
+setInterval(refresh, 3000);
+</script>
+</body>
+</html>
